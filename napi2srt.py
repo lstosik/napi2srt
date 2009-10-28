@@ -7,6 +7,7 @@ import os
 import re
 import sys
 import md5
+import shutil
 import urllib
 import subprocess
 
@@ -17,7 +18,7 @@ p7zip = "/opt/local/bin/7za"
 movie_ext = [".avi", ".mpg", ".mkv", ".mp4", ".rmvb", ".mov"]
 
 # reversed napi 0.16.3.1
-# by gim,krzynio,dosiu,hash 2oo8.
+# by gim,krzynio,dosiu,hash 2oo8
 class NapiProject():
     def f(self, z):
         idx = [ 0xe, 0x3,  0x6, 0x8, 0x2 ]
@@ -62,7 +63,63 @@ class NapiProject():
 def isMovie(file):
     if os.path.splitext(file)[1] in movie_ext: return file
 
-# Funkcja sciaga z NapiProject napisy, a pozniej je konweruje na *.srt
+# Funkcja konwertuje napisy z formatu MPL2 na MicroDVD
+def mpl2(mpl2file, fps):
+    """ mpl2 subtitles -> microdvd subtitles
+        author: i0cus@jabster.pl
+        license: http://creativecommons.org/licenses/by-nc-sa/3.0/deed.pl
+    """
+    MPL2LINE = re.compile('\[(\d+)\]\[(\d+)\](.*)', re.S)
+    FRAMERATE = float(fps)
+    reader, writer = open(mpl2file), open('/tmp/t', 'w')
+
+    for line in reader:
+        print MPL2LINE.match(line).groupdict()
+        try:
+            group = MPL2LINE.match(line).groupdict()
+            start = int(float(group["start"])*0.1*FRAMERATE) or 1
+            stop = int(float(group["stop"])*0.1*FRAMERATE)
+            rest = group["line"]
+            writer.write("{%d}{%d}%s" % (start, stop, rest))
+        except:
+            writer.write(line)
+
+    [fileobj.close() for fileobj in (reader, writer)]
+
+    shutil.copy('/tmp/t', mpl2file)
+
+# sprawdzamy czy napisy *.txt sa w formacie mpl2
+def isMpl2(file):
+    f = open(file, 'r')
+    line = f.readline()
+    f.close
+
+    if re.match(r'\A\[', line):
+        return True
+
+# wyciagamy fps filmu
+def getFps(file):
+    fps = subprocess.Popen("file "+file, shell=True, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE).stdout.read().split()[8]
+
+    if fps == '23.98':
+        fps = '23.976'
+
+    return fps
+
+# Funkcja konwertujaca *.txt do *.srt
+def txt2srt(file):
+    # sprawdzamy fps filmu
+    if os.path.splitext(file)[1] == '.avi':
+        fps = getFps(file)
+    else:
+        fps = '23.976'
+
+    # jezeli napisy sa w formacie mpl2 - konwertujemy je do mdvd
+    if not isMpl2(os.path.splitext(file)[0]+'.txt'):
+        mpl2(os.path.splitext(file)[0]+'.txt', fps)
+
+# Funkcja przetwarza pliki
 def dosrt(files):
     sub = NapiProject()
 
@@ -75,8 +132,9 @@ def dosrt(files):
 
         # jezeli sa napisy w txt to tylko konwerujemy
         elif os.path.isfile(os.path.splitext(file)[0]+'.txt'):
-            print 'txt subtitle exist... Converting... '
+            print 'txt subtitle exist...'
             # TODO: konwersja
+            txt2srt(file)
             continue
 
         # a tu gdy nie ma napisow sciagamy je i konwerujemy do formatu srt
@@ -85,6 +143,7 @@ def dosrt(files):
             if (not sub.getnapi(file)):
                 print 'DOWNLOADED...'
                 # TODO: konwersja
+                txt2srt(file)
             else:
                 print 'NO SUBTITLE'
 
