@@ -1,4 +1,4 @@
-#!/opt/bin/python
+#!/usr/bin/env python
 #
 # subconv v0.2.2 -- divx subtitles converter
 # (w)by Pawel Stolowski
