@@ -14,16 +14,24 @@ import shutil
 import urllib
 import subprocess
 
-### KONFIGURACJA ###
-# Miejsce aplikacji p7zip (7z)
+### CONFIGURATION ###
+
+# Path to p7zip program (http://p7zip.sourceforge.net/)
 p7zip = "/opt/local/bin/7za"
-# Rozszerzenia filmow
+
+# Movies extensions
 movie_ext = [".avi", ".mpg", ".mkv", ".mp4", ".rmvb", ".mov"]
 
-# subconv v0.2.2 -- divx subtitles converter
-# (w)by Pawel Stolowski
-#       Julien Lerouge
+### END OF CONFIGURATION ###
+
+
 class SubConv():
+    """
+    from subconv v0.2.2 -- divx subtitles converter
+     (w)by Pawel Stolowski
+           Julien Lerouge
+    """
+
     def detect_format(self,list):
         """
         Detect the format of input subtitles file.
@@ -143,19 +151,6 @@ class SubConv():
             subtitles.append(subt)
         return subtitles
 
-    def to_tmp(self,list):
-        """
-        Converts list of subtitles (internal format) to tmp format
-        """
-        outl = []
-        for l in list:
-            secs = l[0]
-            h = int(secs/3600)
-            m = int(int(secs%3600)/60)
-            s = int(secs%60)
-            outl.append("%.2d:%.2d:%.2d:%s\n" % (h,m,s,"|".join(l[2:])))
-        return outl
-
     def to_srt(self,list):
         """
         Converts list of subtitles (internal format) to srt format
@@ -191,8 +186,6 @@ class SubConv():
         elif fmt == "srt":
             return self.read_srt(subs)
         elif fmt == "mdvd":
-            if fps == -1:
-                fps = self.detect_fps(subs)
             return self.read_mdvd(subs, fps)
         elif fmt == "auto":
             return self.read_subs(file,self.detect_format(subs),fps)
@@ -200,30 +193,29 @@ class SubConv():
             return self.read_sub2(subs)
 
     def convert(self, file, fps):
-        outfunc = {
-          "srt":self.to_srt,
-          "tmp":self.to_tmp}
-
-        infmt = "auto"
-        outfmt = "srt"
-        out_to_file = 0
+        """
+        Main function in SubConv class who convert from txt subtitle and write
+        into srt format od subtitle
+        """
         fps = float(fps)
 
         # read file
-        sub = self.read_subs(os.path.splitext(file)[0]+'.txt',infmt,fps)
+        sub = self.read_subs(os.path.splitext(file)[0]+'.txt','auto',fps)
         sub_list = [sub]
 
         # save file(S)
         for nsub in sub_list:
-            s = outfunc[outfmt](nsub)
+            s = self.to_srt(nsub)
 
             dst = open(os.path.splitext(file)[0]+'.srt', 'w')
             dst.writelines(s)
             dst.close()
 
-# reversed napi 0.16.3.1
-# by gim,krzynio,dosiu,hash 2oo8
 class NapiProject():
+    """
+    from reversed napi 0.16.3.1
+    by gim,krzynio,dosiu,hash 2oo8
+    """
     def f(self, z):
         idx = [ 0xe, 0x3,  0x6, 0x8, 0x2 ]
         mul = [   2,   2,    5,   4,   3 ]
@@ -242,6 +234,10 @@ class NapiProject():
         return ''.join(b)
 
     def getnapi(self, file):
+        """
+        Main function of NapiProject class who gets subtitles from
+        NapiProjekt.pl Subtitles are only in Polish language
+        """
         d = md5.new();
         d.update(open(file).read(10485760))
 
@@ -262,12 +258,13 @@ class NapiProject():
             os.remove('napisy.7z')
             return 1
 
-# Funkcja sprawdza czy plik jest filmem, w zaleznosci jakie ma rozszerzenie
-# Rozszerzenia ustala sie w movie_ext
 def isMovie(file):
+    """
+    Returns movie files if they exist in movie_ext configuration
+    """
     if os.path.splitext(file)[1] in movie_ext: return file
 
-# Funkcja konwertuje napisy z formatu MPL2 na MicroDVD
+# TODO: move tis function to SubConv class
 def mpl2(mpl2file, fps):
     """ mpl2 subtitles -> microdvd subtitles
         author: i0cus@jabster.pl
@@ -288,8 +285,10 @@ def mpl2(mpl2file, fps):
 
     shutil.copy('/tmp/t', mpl2file)
 
-# sprawdzamy czy napisy *.txt sa w formacie mpl2
 def isMpl2(file):
+    """
+    Return true if subtitles are in mpl2 format
+    """
     f = open(file, 'r')
     line = f.readline()
     f.close
@@ -297,8 +296,10 @@ def isMpl2(file):
     if re.match(r'\A\[', line):
         return True
 
-# wyciagamy fps filmu
 def getFps(file):
+    """
+    Return fps from movie file
+    """
     fps = subprocess.Popen("file "+file, shell=True, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE).stdout.read().split()[8]
 
@@ -307,41 +308,45 @@ def getFps(file):
 
     return fps
 
-# Funkcja konwertujaca *.txt do *.srt
 def txt2srt(file):
-    # sprawdzamy fps filmu
+    """
+    Converter txt to srt format
+    """
     if os.path.splitext(file)[1] == '.avi':
         fps = getFps(file)
     else:
         fps = '23.976'
 
-    # jezeli napisy sa w formacie mpl2 - konwertujemy je do mdvd
     if isMpl2(os.path.splitext(file)[0]+'.txt'):
         mpl2(os.path.splitext(file)[0]+'.txt', fps)
 
-    # Konwerujemy z txt -> srt
+    # main convertion from SubConv
     sub = SubConv()
     sub.convert(file,fps)
 
-# Funkcja przetwarza pliki
-def dosrt(files):
+    return 0
+
+def processing(files):
+    """
+    Processing movie file list
+    """
     sub = NapiProject()
 
     for file in files:
         print 'Processing %s...' % os.path.basename(file),
-        # olewamy gdy napisy w formacie srt juz sa
+        # continue if SRT exist
         if os.path.isfile(os.path.splitext(file)[0]+'.srt'):
             print 'SRT still exist'
             continue
 
-        # jezeli sa napisy w txt to tylko konwerujemy
+        # if txt exist only converting
         elif os.path.isfile(os.path.splitext(file)[0]+'.txt'):
             print 'txt subtitle exist...',
             txt2srt(file)
             print 'CONVERT to SRT'
             continue
 
-        # a tu gdy nie ma napisow sciagamy je i konwerujemy do formatu srt
+        # downloading and converting subtitles
         else:
             print 'Getting subtitle...',
             if (not sub.getnapi(file)):
@@ -353,47 +358,45 @@ def dosrt(files):
 
     return 0
 
-# Funkcja glowna
 def main():
-    # sprawdzamy czy poprawnie jest odpalany skrypt
     if len(sys.argv) == 2:
         fd = sys.argv[1]
     else:
         print 'usage: %s movie_file or path_with_movies' % os.path.basename(sys.argv[0])
         return 0
 
-    # sprawdzamy, czy jest zainstalowany p7zip
+    # checking if p7zip exist in path configured in p7zip
     popen = subprocess.Popen(p7zip, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     if (not popen.stdout.read()):
         print 'You must install p7zip to use this program.'
         return 0
 
-    # sprawdzamy czy plik lub katalog istnieja
+    # checking if file or path exist
     if not os.path.isdir(fd) and not os.path.isfile(fd):
         print 'File or path doesn\'t exist'
         return 0
 
-    # jezeli jest to plik, to dopasowujemy napisy
+    # if this file
     elif not os.path.isdir(fd) and os.path.isfile(fd):
         filelist = [fd]
-        dosrt(filelist)
+        processing(filelist)
         return 0
 
-    # a tu lecimy rekursywnie po katalogach
+    # if this path
     elif os.path.isdir(fd):
         filelist = []
         space = re.compile(r" ", re.I).search
         for root, subFolders, files in os.walk(fd):
             for file in files:
-                # zamieniamy spacje na kropki
+                # rename spave key to dot TODO: remove this
                 if isMovie(file) and space(file):
                     newfile = file.replace(' ', '.')
                     os.rename(os.path.join(root,file), os.path.join(root,newfile))
                     filelist.append(os.path.join(root,newfile))
-                # jezeli plik jest filmem, dodajemy go do listy
+                # adding movie to file list if exist in movie_ext
                 elif isMovie(file): filelist.append(os.path.join(root,file))
 
-        dosrt(filelist)
+        processing(filelist)
         return 0
 
 # START:
