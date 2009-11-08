@@ -66,7 +66,10 @@ class SubConv():
             m = re1.match(list.pop(0), 0)
             if m:
                 subt = [int(m.group(1)) / float(fps)]
-                subt.append(int(m.group(2)) / float(fps))
+                if m.group(2):
+                    subt.append(int(m.group(2)) / float(fps))
+                else:
+                    subt.append(int(m.group(1)) / float(fps) + 3)
                 subt.extend(m.group(3).strip().split("|"))
                 subtitles.append(subt)
         return subtitles
