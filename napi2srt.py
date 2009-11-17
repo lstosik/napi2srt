@@ -263,7 +263,7 @@ class NapiProject():
 
 def isMovie(file):
     """
-    Returns movie files if they exist in movie_ext configuration
+    Returns movie file if they exist in movie_ext configuration
     """
     if os.path.splitext(file)[1] in movie_ext: return file
 
@@ -303,7 +303,7 @@ def getFps(file):
     """
     Return fps from movie file
     """
-    fps = subprocess.Popen("file "+file, shell=True, stdout=subprocess.PIPE,
+    fps = subprocess.Popen('file "%s"' % file, shell=True, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE).stdout.read().split()[8]
 
     if fps == '23.98':
@@ -336,14 +336,14 @@ def processing(files):
     sub = NapiProject()
 
     for file in files:
-        print 'Processing %s...' % os.path.basename(file),
         # continue if SRT exist
         if os.path.isfile(os.path.splitext(file)[0]+'.srt'):
-            print 'SRT still exist'
             continue
 
+        print 'Processing %s...' % os.path.basename(file),
+
         # if txt exist only converting
-        elif os.path.isfile(os.path.splitext(file)[0]+'.txt'):
+        if os.path.isfile(os.path.splitext(file)[0]+'.txt'):
             print 'txt subtitle exist...',
             txt2srt(file)
             print 'CONVERT to SRT'
@@ -379,13 +379,13 @@ def main():
         print 'File or path doesn\'t exist'
         return 0
 
-    # if this file
+    # if file
     elif not os.path.isdir(fd) and os.path.isfile(fd):
         filelist = [fd]
         processing(filelist)
         return 0
 
-    # if this path
+    # if path
     elif os.path.isdir(fd):
         filelist = []
         space = re.compile(r" ", re.I).search
