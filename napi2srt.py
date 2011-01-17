@@ -304,8 +304,8 @@ def getFps(file):
     Return fps from movie file
     """
     fps = subprocess.Popen('file "%s"' % file, shell=True, stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE).stdout.read().split()[8]
-
+                           stderr=subprocess.PIPE).stdout.read()
+    fps = re.search(", ([0-9]+\.[0-9]+) fps", fps).group(1)
     if fps == '23.98':
         fps = '23.976'
 
