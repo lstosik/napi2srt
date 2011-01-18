@@ -9,7 +9,7 @@ Downloader and converter to SRT subtitles from NapiProject.pl
 import os
 import re
 import sys
-import md5
+import hashlib
 import shutil
 import urllib
 import subprocess
@@ -17,7 +17,7 @@ import subprocess
 ### CONFIGURATION ###
 
 # Path to p7zip program (http://p7zip.sourceforge.net/)
-p7zip = "/opt/local/bin/7za"
+p7zip = "PATH TO 7za"
 
 # Movies extensions
 movie_ext = [".avi", ".mpg", ".mkv", ".mp4", ".rmvb", ".mov"]
@@ -241,7 +241,7 @@ class NapiProject():
         Main function of NapiProject class who gets subtitles from
         NapiProjekt.pl Subtitles are only in Polish language
         """
-        d = md5.new();
+        d = hashlib.md5()
         d.update(open(file).read(10485760))
 
         str = 'http://napiprojekt.pl/unit_napisy/dl.php?l=PL&f=%s&t=%s&v=other&kolejka=false&nick=&pass=&napios=%s' % (d.hexdigest(), self.f(d.hexdigest()), os.name)
@@ -362,16 +362,16 @@ def processing(files):
     return 0
 
 def main():
-    if len(sys.argv) == 2:
-        fd = sys.argv[1]
-    else:
-        print 'usage: %s movie_file or path_with_movies' % os.path.basename(sys.argv[0])
-        return 0
-
     # checking if p7zip exist in path configured in p7zip
     popen = subprocess.Popen(p7zip, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     if (not popen.stdout.read()):
         print 'You must install p7zip to use this program.'
+        return 0
+
+    if len(sys.argv) == 2:
+        fd = sys.argv[1]
+    else:
+        print 'usage: %s movie_file or path_with_movies' % os.path.basename(sys.argv[0])
         return 0
 
     # checking if file or path exist
