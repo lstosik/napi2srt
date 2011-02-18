@@ -305,7 +305,15 @@ def getFps(file):
     """
     fps = subprocess.Popen('file "%s"' % file, shell=True, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE).stdout.read()
-    fps = re.search(", ([0-9]+\.[0-9]+) fps", fps).group(1)
+    result = re.search(", ([0-9]+\.[0-9]+) fps", fps)
+    if result == None: #nie udalo sie dokladnie ustalic fps
+        print("can not determine fps from:"+fps)
+	if fps.find('~30 fps') != -1:
+	    fps = '29.970'
+        else:   
+	    fps = '23.976'
+    else:
+        fps = result.group(1)
     if fps == '23.98':
         fps = '23.976'
 
