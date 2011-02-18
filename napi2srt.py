@@ -362,6 +362,10 @@ def processing(files):
     return 0
 
 def main():
+    global p7zip
+    if not os.path.exists(p7zip):
+	p7zip = subprocess.Popen(["which", "7za"], stdout=subprocess.PIPE).communicate()[0].rstrip('\n')
+
     # checking if p7zip exist in path configured in p7zip
     popen = subprocess.Popen(p7zip, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     if (not popen.stdout.read()):
